@@ -1,0 +1,48 @@
+import { ThirdwebClient } from "./thirdweb";
+import React, { useEffect, useState } from "react";
+
+class ClientManager {
+  client: any = null;
+  wallets: any = null;
+  thirdwebClient: any = null;
+
+  constructor() {
+    this.thirdwebClient = new ThirdwebClient();
+    this.client = this.thirdwebClient.getClient();
+  }
+
+  async getWallets() {
+    if (!this.wallets) {
+      this.wallets = await this.thirdwebClient.getWallets();
+    }
+    return this.wallets;
+  }
+
+  getClient() {
+    return this.client;
+  }
+
+  // Empty function to be triggered by button
+  async realoadWallets() {
+    console.log("Reload!!");
+    this.wallets = null;
+    return await this.getWallets();
+  }
+
+  // Clean all wallets function
+  cleanAllWallets() {
+    console.log("Clean all wallets - empty function");
+  }
+
+  // Load specific wallet function
+  loadSpecificWallet() {
+    console.log("Load specific wallet - empty function");
+  }
+
+}
+
+// === Exported Client Instance ===
+// Single instance for the entire application
+export const client = new ClientManager();
+
+

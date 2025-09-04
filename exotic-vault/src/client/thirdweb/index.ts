@@ -1,38 +1,33 @@
 import { createThirdwebClient, Engine } from "thirdweb";
+import { THIRDWEB_CLIENT_ID, THIRDWEB_CLIENT_SECRET } from "../variables";
 
 export class ThirdwebClient {
-  clientId: string;
-  clientSecret: string;
-  client: any;
-  wallets: any;
-  isReady: boolean = false;
-  readyPromise: Promise<void>;
+    clientId: string;
+    clientSecret: string;
+    client: any;
+    wallets: any;
 
-  constructor(clientId: string, clientSecret: string) {
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    this.client = createThirdwebClient({
-      clientId: this.clientId,
-      secretKey: this.clientSecret,
-    });
-    this.readyPromise = this.init();
-  }
-
-  async init() {
-    const { Engine } = await import("thirdweb");
-    this.wallets = await Engine.getServerWallets({ client: this.client });
-    this.isReady = true;
-  }
-
-  async getWallets() {
-    if (!this.isReady) {
-      await this.readyPromise;
+    constructor() {
+        this.clientId = THIRDWEB_CLIENT_ID;
+        this.clientSecret = THIRDWEB_CLIENT_SECRET;
     }
-    return this.wallets;
-  }
-}
 
-// Singleton instance
-const clientId = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
-const clientSecret = import.meta.env.VITE_THIRDWEB_CLIENT_SECRET;
-export const thirdweb = new ThirdwebClient(clientId, clientSecret);
+    getClient() {
+        if (!this.client) {
+            this.client = createThirdwebClient({
+                clientId: this.clientId,
+                secretKey: this.clientSecret,
+            });
+        }
+        return this.client;
+    }
+
+    async getWallets() {
+        if (!this.wallets) {
+            this.wallets = await Engine.getServerWallets({
+                client: this.getClient(),
+            });
+        }
+        return this.wallets;
+    }
+}

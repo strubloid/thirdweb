@@ -1,1 +1,0 @@
-export { thirdweb } from "./client/thirdweb";
