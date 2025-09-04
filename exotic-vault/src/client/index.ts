@@ -2,56 +2,60 @@ import { ThirdwebClient } from "./thirdweb";
 import React, { useEffect, useState } from "react";
 
 class ClientManager {
-  client: any = null;
-  wallets: any = null;
-  thirdwebClient: ThirdwebClient;
+    client: any = null;
+    thirdwebClient: ThirdwebClient;
 
-  constructor() {
-    this.thirdwebClient = new ThirdwebClient();
-    this.client = this.thirdwebClient.getClient();
-  }
+    serverWallet: any = null;
+    inAppWallet: any = null;
 
-  async loadWallets() {
-    if (!this.wallets) {
-      this.wallets = await this.thirdwebClient.getWallets();
+    constructor() {
+        this.thirdwebClient = new ThirdwebClient();
+        this.client = this.thirdwebClient.getClient();
     }
-    return this.wallets;
-  }
 
-  getWallets() {
-    return this.wallets;
-  }
+    /**
+     * Get the Thirdweb client instance.
+     * @returns The Thirdweb client instance.
+     */
+    getClient() {
+        return this.client;
+    }
 
-  getClient() {
-    return this.client;
-  }
+    /**
+     * Get the server wallet instance.
+     * @returns The server wallet instance.
+     */
+    async getServerWallet() {
+        this.serverWallet = await this.thirdwebClient.getServerWallet();
+        return this.serverWallet;
+    }
 
-  // Empty function to be triggered by button
-  async realoadWallets() {
-    this.wallets = null;
-    return await this.loadWallets();
-  }
+    /**
+     * Get the in-app wallet instance.
+     * @returns The in-app wallet instance.
+     */
+    async getInAppWallet() {
 
-  // Clean all wallets function
-  async cleanAllWallets() {
-    await this.thirdwebClient.cleanAllWalletsFromEngine();
-    this.wallets = this.thirdwebClient.wallets;
-  }
+        // loading the in-app wallet
+        this.inAppWallet = await this.thirdwebClient.getInAppWallet();
+        console.log('inAppWallet', this.inAppWallet);
 
-  // Clean all wallets function
-  async addTestWallet() {
-    await this.thirdwebClient.addTestWallet();
-  }
-  
-  // Load specific wallet function
-  loadSpecificWallet() {
-    console.log("Load specific wallet - empty function");
-  }
+        return this.inAppWallet;
+    }
 
+    // Clean inAppWallets function
+    // TODO !!!!
+    async cleanInAppWallet() {
+        await this.thirdwebClient.cleanInAppWallet();
+        this.inAppWallet = this.thirdwebClient.wallets;
+    }
+
+    // Clean all wallets function
+    async addInAppWallet() {
+        await this.thirdwebClient.addInAppWallet();
+    }
 }
 
 // === Exported Client Instance ===
 // Single instance for the entire application
 export const client = new ClientManager();
-
-

@@ -5,73 +5,105 @@ import React, { useEffect, useState } from "react";
 import { client } from "./client";
 
 export function App() {
+    
     const [clientInfo, setClientInfo] = useState<any>(null);
-    const [wallets, setWallets] = useState<any>(null);
     const [loadingClient, setLoadingClient] = useState(true);
-    const [loadingWallets, setLoadingWallets] = useState(true);
+    
+    const [serverWallet, setServerWallet] = useState<any>(null);
+    const [loadingServerWallet, setLoadingServerWallet] = useState(true);
+
+    const [inAppWallet, setInAppWallet] = useState<any>(null);
+    const [loadingInAppWallet, setLoadingInAppWallet] = useState(true);
 
     useEffect(() => {
         async function fetchData() {
+            
             setClientInfo(client.getClient());
-            setWallets(await client.loadWallets());
             setLoadingClient(false);
-            setLoadingWallets(false);
+
+            setServerWallet(await client.getServerWallet());
+            setLoadingServerWallet(false);
+
+            setInAppWallet(await client.getInAppWallet());
+            setLoadingInAppWallet(false);
         }
         fetchData();
     }, []);
 
     // This will handle the reload wallets button click
-    const clickReloadWallets = async () => {
-        setLoadingWallets(true);
-        setWallets(null);
-        const newWallets = await client.realoadWallets();
-        console.log(newWallets)
+    const clickReloadServerWallet = async () => {
+        setLoadingServerWallet(true);
+        setServerWallet(null);
+
+        const serverWallet = await client.getServerWallet();
+        console.log(serverWallet)
 
         setTimeout(() => {
-            setWallets(newWallets);
-            setLoadingWallets(false);
+            setServerWallet(serverWallet);
+            setLoadingServerWallet(false);
         }, 1000);
     };
 
     // This will handle the reload wallets button click
-    const clickCleanWallets = async () => {
-        setLoadingWallets(true);
-        setWallets(null);
+    const clickReloadInAppWallet = async () => {
+        setLoadingInAppWallet(true);
+        setInAppWallet(null);
 
-        await client.cleanAllWallets();
-        const wallets = await client.getWallets();
+        console.log('click')
+        const wallet = await client.getInAppWallet();
 
         setTimeout(() => {
-            setWallets(wallets);
-            setLoadingWallets(false);
+            setInAppWallet(wallet);
+            setLoadingInAppWallet(false);
         }, 1000);
 
     };
-    const clickAddWallets = async () => {
+
+    /**
+     * This will handle the clean inAppWallets button click
+     */
+    const clickCleanInAppWallet = async () => {
+
+        setLoadingInAppWallet(true);
+        setInAppWallet(null);
+
+        await client.cleanInAppWallet();
+        const wallets = await client.getInAppWallet();
+
+        setTimeout(() => {
+            setInAppWallet(wallets);
+            setLoadingInAppWallet(false);
+        }, 1000);
+
+    };
+
+    /**
+     * This will handle the add inAppWallet button click
+     */
+    const clickAddInAppWallet = async () => {
         
-        setLoadingWallets(true);
-        setWallets(null);
+        setLoadingInAppWallet(true);
+        setInAppWallet(null);
 
-        await client.addTestWallet();
-        const wallets = await client.getWallets();
+        await client.addInAppWallet();
+        const wallets = await client.getInAppWallet();
 
         setTimeout(() => {
-            setWallets(wallets);
-            setLoadingWallets(false);
+            setInAppWallet(wallets);
+            setLoadingInAppWallet(false);
         }, 1000);
-
     };
-
-    
 
     return (
         <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-lg mx-auto">
             <div className="py-20">
                 <Header
-                    clickReloadWallets={clickReloadWallets}
-                    clickCleanWallets={clickCleanWallets}
-                    clickAddWallets={clickAddWallets}
+                    clickReloadServerWallet={clickReloadServerWallet}
+                    clickReloadInAppWallet={clickReloadInAppWallet}
+                    clickCleanInAppWallet={clickCleanInAppWallet}
+                    clickAddInAppWallet={clickAddInAppWallet}
                 />
+
                 {/* Client Block */}
                 <div className="my-8 p-4 bg-zinc-900 rounded text-zinc-100">
                     <h2 className="font-bold mb-2">Client</h2>
@@ -84,14 +116,26 @@ export function App() {
                     )}
                 </div>
 
-                {/* Wallets Block */}
+                {/* ServerWallet Block */}
                 <div className="my-8 p-4 bg-zinc-800 rounded text-zinc-100">
-                    <h2 className="font-bold mb-2">Wallets</h2>
-                    {loadingWallets ? (
-                        <span>Loading wallets...</span>
+                    <h2 className="font-bold mb-2">Server Wallet</h2>
+                    {loadingServerWallet ? (
+                        <span>Loading wallet...</span>
                     ) : (
                         <pre className="overflow-x-auto text-xs">
-                            {JSON.stringify(wallets, null, 2)}
+                            {JSON.stringify(serverWallet, null, 2)}
+                        </pre>
+                    )}
+                </div>
+
+                {/* ServerInAppWallet Block */}
+                <div className="my-8 p-4 bg-zinc-500 rounded text-zinc-100">
+                    <h2 className="font-bold mb-2">Server In-App Wallet</h2>
+                    {loadingInAppWallet ? (
+                        <span>Loading In App wallet...</span>
+                    ) : (
+                        <pre className="overflow-x-auto text-xs">
+                            {JSON.stringify(inAppWallet, null, 2)}
                         </pre>
                     )}
                 </div>
@@ -103,13 +147,15 @@ export function App() {
 }
 
 function Header({
-    clickReloadWallets,
-    clickCleanWallets,
-    clickAddWallets
+    clickReloadServerWallet,
+    clickReloadInAppWallet,
+    clickCleanInAppWallet,
+    clickAddInAppWallet
 }: {
-    clickReloadWallets: () => Promise<void>;
-    clickCleanWallets: () => Promise<void>; 
-    clickAddWallets: () => Promise<void>;
+    clickReloadServerWallet: () => Promise<void>;
+    clickReloadInAppWallet: () => Promise<void>;
+    clickCleanInAppWallet: () => Promise<void>; 
+    clickAddInAppWallet: () => Promise<void>;
 }) {
     return (
         <header className="flex flex-col items-center mb-20 md:mb-20">
@@ -128,20 +174,26 @@ function Header({
             {/* Header Buttons Section */}
             <div className="flex gap-4 flex-wrap justify-center">
                 <button
-                    onClick={clickReloadWallets}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                    onClick={clickReloadServerWallet}
+                    className="px-4 py-2 bg-blue-400 hover:bg-blue-700 text-white rounded transition-colors"
                 >
-                    Reload Wallets
+                    Reload Server Wallet
                 </button>
                 <button
-                    onClick={clickCleanWallets}
+                    onClick={clickReloadInAppWallet}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                >
+                    Reload In-App Wallet
+                </button>
+                <button
+                    onClick={clickCleanInAppWallet}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                     title="Delete wallets using profile unlinking method"
                 >
-                    Delete All Wallets
+                    Delete In-App Wallets
                 </button>
                 <button
-                    onClick={clickAddWallets}
+                    onClick={clickAddInAppWallet}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
                 >
                     Add a Wallet
