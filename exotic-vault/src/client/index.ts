@@ -4,17 +4,21 @@ import React, { useEffect, useState } from "react";
 class ClientManager {
   client: any = null;
   wallets: any = null;
-  thirdwebClient: any = null;
+  thirdwebClient: ThirdwebClient;
 
   constructor() {
     this.thirdwebClient = new ThirdwebClient();
     this.client = this.thirdwebClient.getClient();
   }
 
-  async getWallets() {
+  async startWallets() {
     if (!this.wallets) {
       this.wallets = await this.thirdwebClient.getWallets();
     }
+    return this.wallets;
+  }
+
+  getWallets() {
     return this.wallets;
   }
 
@@ -24,14 +28,14 @@ class ClientManager {
 
   // Empty function to be triggered by button
   async realoadWallets() {
-    console.log("Reload!!");
     this.wallets = null;
     return await this.getWallets();
   }
 
   // Clean all wallets function
-  cleanAllWallets() {
-    console.log("Clean all wallets - empty function");
+  async cleanAllWallets() {
+    await this.thirdwebClient.cleanAllWalletsFromEngine();
+    this.wallets = this.thirdwebClient.wallets;
   }
 
   // Load specific wallet function

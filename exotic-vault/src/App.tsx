@@ -12,7 +12,7 @@ export function App() {
     useEffect(() => {
         async function fetchData() {
             setClientInfo(client.getClient());
-            setWallets(await client.getWallets());
+            setWallets(await client.startWallets());
             setLoadingClient(false);
             setLoadingWallets(false);
         }
@@ -31,11 +31,28 @@ export function App() {
         }, 1000);
     };
 
+    // This will handle the reload wallets button click
+    const clickCleanWallets = async () => {
+        setLoadingWallets(true);
+        setWallets(null);
+
+        await client.cleanAllWallets();
+        const wallets = await client.getWallets();
+
+        setTimeout(() => {
+            setWallets(wallets);
+            setLoadingWallets(false);
+        }, 1000);
+
+    };
+
     return (
         <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-lg mx-auto">
             <div className="py-20">
-                <Header clickReloadWallets={clickReloadWallets} />
-
+                <Header
+                    clickReloadWallets={clickReloadWallets}
+                    clickCleanWallets={clickCleanWallets}
+                />
                 {/* Client Block */}
                 <div className="my-8 p-4 bg-zinc-900 rounded text-zinc-100">
                     <h2 className="font-bold mb-2">Client</h2>
@@ -66,7 +83,13 @@ export function App() {
     );
 }
 
-function Header({ clickReloadWallets }: { clickReloadWallets: () => Promise<void> }) {
+function Header({
+    clickReloadWallets,
+    clickCleanWallets,
+}: {
+    clickReloadWallets: () => Promise<void>;
+    clickCleanWallets: () => Promise<void>;
+}) {
     return (
         <header className="flex flex-col items-center mb-20 md:mb-20">
             <h1 className="text-2xl md:text-6xl font-bold tracking-tighter mb-6 text-zinc-100">
@@ -90,7 +113,7 @@ function Header({ clickReloadWallets }: { clickReloadWallets: () => Promise<void
                     Reload Wallets
                 </button>
                 <button
-                    onClick={() => client.cleanAllWallets()}
+                    onClick={clickCleanWallets}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                 >
                     Clean All Wallets
