@@ -11,7 +11,7 @@ class ClientManager {
     this.client = this.thirdwebClient.getClient();
   }
 
-  async startWallets() {
+  async loadWallets() {
     if (!this.wallets) {
       this.wallets = await this.thirdwebClient.getWallets();
     }
@@ -29,7 +29,7 @@ class ClientManager {
   // Empty function to be triggered by button
   async realoadWallets() {
     this.wallets = null;
-    return await this.getWallets();
+    return await this.loadWallets();
   }
 
   // Clean all wallets function
@@ -38,6 +38,11 @@ class ClientManager {
     this.wallets = this.thirdwebClient.wallets;
   }
 
+  // Clean all wallets function
+  async addTestWallet() {
+    await this.thirdwebClient.addTestWallet();
+  }
+  
   // Load specific wallet function
   loadSpecificWallet() {
     console.log("Load specific wallet - empty function");

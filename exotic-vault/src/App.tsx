@@ -1,7 +1,8 @@
 import { ConnectButton } from "thirdweb/react";
 import thirdwebIcon from "./thirdweb.svg";
-import { client } from "./client";
+
 import React, { useEffect, useState } from "react";
+import { client } from "./client";
 
 export function App() {
     const [clientInfo, setClientInfo] = useState<any>(null);
@@ -12,7 +13,7 @@ export function App() {
     useEffect(() => {
         async function fetchData() {
             setClientInfo(client.getClient());
-            setWallets(await client.startWallets());
+            setWallets(await client.loadWallets());
             setLoadingClient(false);
             setLoadingWallets(false);
         }
@@ -24,6 +25,7 @@ export function App() {
         setLoadingWallets(true);
         setWallets(null);
         const newWallets = await client.realoadWallets();
+        console.log(newWallets)
 
         setTimeout(() => {
             setWallets(newWallets);
@@ -45,6 +47,22 @@ export function App() {
         }, 1000);
 
     };
+    const clickAddWallets = async () => {
+        
+        setLoadingWallets(true);
+        setWallets(null);
+
+        await client.addTestWallet();
+        const wallets = await client.getWallets();
+
+        setTimeout(() => {
+            setWallets(wallets);
+            setLoadingWallets(false);
+        }, 1000);
+
+    };
+
+    
 
     return (
         <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-lg mx-auto">
@@ -52,6 +70,7 @@ export function App() {
                 <Header
                     clickReloadWallets={clickReloadWallets}
                     clickCleanWallets={clickCleanWallets}
+                    clickAddWallets={clickAddWallets}
                 />
                 {/* Client Block */}
                 <div className="my-8 p-4 bg-zinc-900 rounded text-zinc-100">
@@ -86,9 +105,11 @@ export function App() {
 function Header({
     clickReloadWallets,
     clickCleanWallets,
+    clickAddWallets
 }: {
     clickReloadWallets: () => Promise<void>;
-    clickCleanWallets: () => Promise<void>;
+    clickCleanWallets: () => Promise<void>; 
+    clickAddWallets: () => Promise<void>;
 }) {
     return (
         <header className="flex flex-col items-center mb-20 md:mb-20">
@@ -115,14 +136,15 @@ function Header({
                 <button
                     onClick={clickCleanWallets}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                    title="Delete wallets using profile unlinking method"
                 >
-                    Clean All Wallets
+                    Delete All Wallets
                 </button>
                 <button
-                    onClick={() => client.loadSpecificWallet()}
+                    onClick={clickAddWallets}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
                 >
-                    Load Specific Wallet
+                    Add a Wallet
                 </button>
             </div>
         </header>
