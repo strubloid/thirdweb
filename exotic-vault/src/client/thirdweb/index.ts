@@ -84,8 +84,9 @@ export class ThirdwebClient {
             let page = 1;
             let pagesFetched = 0;
             const all: ThirdwebUser[] = [];
+            let hasMore = true;
             
-            for (;;) {
+            while (hasMore && (!opts?.maxPages || pagesFetched < opts.maxPages)) {
                 const qs = new URLSearchParams({
                     limit: String(limit),
                     page: String(page),
@@ -100,8 +101,6 @@ export class ThirdwebClient {
                     method: "GET",
                     headers: { "x-secret-key": this.clientSecret },
                 });
-
-                // console.log('response', res);
 
                 if (!res.ok) {
                     const text = await res.text();
@@ -121,11 +120,10 @@ export class ThirdwebClient {
                 all.push(...wallets);
 
                 pagesFetched++;
-                const hasMore = Boolean(json.result?.pagination?.hasMore);
-                if (!hasMore) break;
-                if (opts?.maxPages && pagesFetched >= opts.maxPages) break;
-
                 page++;
+                
+                // Update hasMore for next iteration
+                hasMore = Boolean(json.result?.pagination?.hasMore);
             }
             
             // If exist something we will add to it

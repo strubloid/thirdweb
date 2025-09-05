@@ -32,11 +32,10 @@ export function App() {
 
     // This will handle the reload wallets button click
     const clickReloadServerWallet = async () => {
+
         setLoadingServerWallet(true);
         setServerWallet(null);
-
         const serverWallet = await client.getServerWallet();
-        console.log(serverWallet)
 
         setTimeout(() => {
             setServerWallet(serverWallet);
@@ -46,10 +45,9 @@ export function App() {
 
     // This will handle the reload wallets button click
     const clickReloadInAppWallet = async () => {
+
         setLoadingInAppWallet(true);
         setInAppWallet(null);
-
-        console.log('click')
         const wallet = await client.getInAppWallet();
 
         setTimeout(() => {
