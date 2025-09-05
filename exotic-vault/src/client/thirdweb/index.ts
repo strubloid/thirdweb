@@ -201,35 +201,6 @@ export class ThirdwebClient {
                 walletAddress: address,
             });
 
-            return true;
-        } catch (error) {
-            console.error("Error :", error);
-            return false;
-        }
-    }
-
-    /**
-     * This will clean one in-app wallets.
-     * @returns
-     */
-    async cleanInAppWallet() {
-        try {
-            console.log("clean all in-app wallets");
-
-            // loading the client
-            const client = this.getClient();
-
-            // loading the in-app wallet
-            const userInAppWallet = await this.getInAppWallet(this.jwtToken);
-
-            const address = userInAppWallet?.address;
-
-            // loading the user data
-            const user = await getUser({
-                client,
-                walletAddress: address,
-            });
-
             // we are loading only one chain, but we can add any other one and will return all the balances
             let chains = [this.chain];
 
@@ -270,32 +241,104 @@ export class ThirdwebClient {
                 })
             );
 
+            console.log("Get in app wallet balance");
             console.log(balances);
 
+            return true;
+        } catch (error) {
+            console.error("Error :", error);
+            return false;
+        }
+    }
+
+    /**
+     * This will clean one in-app wallets.
+     * @returns
+     */
+    async cleanInAppWallet() {
+        try {
+            console.log("clean all in-app wallets");
+
+            // // loading the client
+            // const client = this.getClient();
+
+            // // loading the in-app wallet
+            // const userInAppWallet = await this.getInAppWallet(this.jwtToken);
+
+            // const address = userInAppWallet?.address;
+
+            // // loading the user data
+            // const user = await getUser({
+            //     client,
+            //     walletAddress: address,
+            // });
+
+            // // we are loading only one chain, but we can add any other one and will return all the balances
+            // let chains = [this.chain];
+
+            // // getting the balances for each chain
+            // const balances = await Promise.all(
+            //     chains.map(async (chain) => {
+            //         console.log(chain);
+
+            //         const native = await getWalletBalance({
+            //             client,
+            //             address,
+            //             chain,
+            //             // tokenAddress: undefined  // native coin; set to an ERC-20 address to read a token
+            //         });
+                    
+            //         // TODO: Double check this with real values
+            //         const { result: nativeEur } = await convertCryptoToFiat({
+            //             client,
+            //             chain,
+            //             fromTokenAddress: NATIVE_TOKEN_ADDRESS,
+            //             fromAmount: Number(native.value),
+            //             to: "EUR",
+            //         });
+
+            //         console.log("Native balance:", nativeEur);
+
+            //         return {
+            //             chainId: chain.id,
+            //             chainName: (chain as any).name ?? `${chain.id}`,
+            //             native: {
+            //                 symbol: native.symbol,
+            //                 value: native.value, // bigint in wei
+            //                 eurValue: nativeEur, // EUR value of the native token balance
+            //                 displayValue: native.displayValue, // human-readable
+            //                 decimals: native.decimals,
+            //             },
+            //         };
+            //     })
+            // );
+
+            // console.log(balances);
+
             // Get all in-app wallets first
-            // const walletsResponse = await this.getInAppWallets();
+            const walletsResponse = await this.getInAppWallets();
 
-            // // If there are wallets, delete each one using the profile unlinking approach
-            // if (
-            //     walletsResponse?.accounts &&
-            //     walletsResponse.accounts.length > 0
-            // ) {
-            //     for (const wallet of walletsResponse.accounts) {
-            //         try {
-            //             await this.deleteWalletUser(wallet.address);
-            //         } catch (walletError) {
-            //             console.error(
-            //                 `❌ Error deleting wallet ${wallet.address}:`,
-            //                 walletError
-            //             );
-            //         }
-            //     }
-            // } else {
-            //     console.log("No wallets found to delete");
-            // }
+        
+            // If there are wallets, delete each one using the profile unlinking approach
+            if (walletsResponse && walletsResponse?.length > 0) {
+                for (const wallet of walletsResponse) {
+                    try {
+                        await this.deleteWalletUser(wallet.address);
+                    } catch (walletError) {
+                        console.error(
+                            `❌ Error deleting wallet ${wallet.address}:`,
+                            walletError
+                        );
+                    }
+                }
+                console.log("delete");
 
-            // // Clear local cache after deletion attempts
-            // this.wallets = null;
+            } else {
+                console.log("No wallets found to delete");
+            }
+
+            // Clear local cache after deletion attempts
+            this.wallets = null;
             return true;
         } catch (error) {
             console.error("Error cleaning wallets from Engine:", error);
@@ -314,7 +357,10 @@ export class ThirdwebClient {
                 client: this.getClient(),
             });
 
-            console.log(`Found: ${walletProfiles.length}`);
+            console.log("walletProfiles");
+            console.log(walletProfiles);
+            console.log(walletProfiles.length)
+            // console.log(`Found: ${walletProfiles.length}`);
 
             if (walletProfiles.length === 0) {
                 console.log(`No profiles found... [${address}]`);

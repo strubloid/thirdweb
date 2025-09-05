@@ -1,8 +1,54 @@
 import { ConnectButton } from "thirdweb/react";
+import { createThirdwebClient } from "thirdweb";
+import { avalancheFuji } from "thirdweb/chains";
 import thirdwebIcon from "./thirdweb.svg";
 
 import React, { useEffect, useState } from "react";
 import { client } from "./client";
+
+// Create the thirdweb client for the BuyWidget
+const thirdwebClient = createThirdwebClient({
+  clientId: "bb0a679a087e19d585b267e1b9275a70", // Your TestWallet project client ID
+});
+
+function FundKonviWallet() {
+  const faucets = [
+    {
+      name: "Avalanche Official Faucet",
+      url: "https://faucet.avax.network/",
+      description: "Official Avalanche faucet - requires Core wallet connection"
+    },
+    {
+      name: "Chainlink Faucet", 
+      url: "https://faucets.chain.link/fuji",
+      description: "Chainlink's Fuji testnet faucet - requires GitHub account"
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      
+      {faucets.map((faucet, index) => (
+        <div key={index} className="border border-zinc-700 rounded-lg p-4 hover:border-zinc-600 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="font-semibold text-white mb-1">{faucet.name}</h3>
+              <p className="text-sm text-zinc-400">{faucet.description}</p>
+            </div>
+            <a
+              href={faucet.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-sm"
+            >
+              Get AVAX
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function App() {
     
@@ -101,6 +147,11 @@ export function App() {
                     clickCleanInAppWallet={clickCleanInAppWallet}
                     clickAddInAppWallet={clickAddInAppWallet}
                 />
+                {/* Fund Wallet Section */}
+                <div className="my-2 p-3 bg-red-900 rounded text-zinc-100">
+                    <h2 className="font-bold mb-4">Fund Wallet</h2>
+                    <FundKonviWallet />
+                </div>
 
                 {/* Client Block */}
                 <div className="my-8 p-4 bg-zinc-900 rounded text-zinc-100">
@@ -113,6 +164,8 @@ export function App() {
                         </pre>
                     )}
                 </div>
+
+                
 
                 {/* ServerWallet Block */}
                 <div className="my-8 p-4 bg-zinc-800 rounded text-zinc-100">
