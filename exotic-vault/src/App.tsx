@@ -24,7 +24,7 @@ export function App() {
             setServerWallet(await client.getServerWallet());
             setLoadingServerWallet(false);
 
-            setInAppWallet(await client.getInAppWallet());
+            setInAppWallet(await client.getInAppWallets());
             setLoadingInAppWallet(false);
         }
         fetchData();
@@ -48,7 +48,7 @@ export function App() {
 
         setLoadingInAppWallet(true);
         setInAppWallet(null);
-        const wallet = await client.getInAppWallet();
+        const wallet = await client.getInAppWallets();
 
         setTimeout(() => {
             setInAppWallet(wallet);
@@ -66,7 +66,7 @@ export function App() {
         setInAppWallet(null);
 
         await client.cleanInAppWallet();
-        const wallets = await client.getInAppWallet();
+        const wallets = await client.getInAppWallets();
 
         setTimeout(() => {
             setInAppWallet(wallets);
@@ -84,7 +84,7 @@ export function App() {
         setInAppWallet(null);
 
         await client.addInAppWallet();
-        const wallets = await client.getInAppWallet();
+        const wallets = await client.getInAppWallets();
 
         setTimeout(() => {
             setInAppWallet(wallets);

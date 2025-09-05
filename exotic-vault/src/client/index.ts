@@ -34,17 +34,14 @@ class ClientManager {
      * Get the in-app wallet instance.
      * @returns The in-app wallet instance.
      */
-    async getInAppWallet() {
+    async getInAppWallets() {
 
         // loading the in-app wallet
-        this.inAppWallet = await this.thirdwebClient.getInAppWallet();
-        console.log('inAppWallet', this.inAppWallet);
-
+        this.inAppWallet = await this.thirdwebClient.getInAppWallets();
         return this.inAppWallet;
     }
 
     // Clean inAppWallets function
-    // TODO !!!!
     async cleanInAppWallet() {
         await this.thirdwebClient.cleanInAppWallet();
         this.inAppWallet = this.thirdwebClient.wallets;
