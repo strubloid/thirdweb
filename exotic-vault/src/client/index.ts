@@ -51,6 +51,11 @@ class ClientManager {
     async addInAppWallet() {
         await this.thirdwebClient.addInAppWallet();
     }
+
+    // Transfer AVAX function
+    async transferAVAX(fromAddress: string, toAddress: string, amount: string) {
+        return await this.thirdwebClient.transferAVAX(fromAddress, toAddress, amount);
+    }
 }
 
 // === Exported Client Instance ===

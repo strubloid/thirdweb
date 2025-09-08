@@ -50,6 +50,126 @@ function FundKonviWallet() {
   );
 }
 
+function AVAXTransfer() {
+    const [fromAddress, setFromAddress] = useState("");
+    const [toAddress, setToAddress] = useState("");
+    const [amount, setAmount] = useState("");
+    const [isTransferring, setIsTransferring] = useState(false);
+    const [transferResult, setTransferResult] = useState<any>(null);
+
+    const handleTransfer = async () => {
+        if (!fromAddress || !toAddress || !amount) {
+            alert("Please fill in all fields");
+            return;
+        }
+
+        if (parseFloat(amount) <= 0) {
+            alert("Amount must be greater than 0");
+            return;
+        }
+
+        setIsTransferring(true);
+        setTransferResult(null);
+
+        try {
+            const result = await client.transferAVAX(fromAddress, toAddress, amount);
+            setTransferResult(result);
+            
+            if (result.success) {
+                // Clear form on success
+                setFromAddress("");
+                setToAddress("");
+                setAmount("");
+            }
+        } catch (error) {
+            setTransferResult({
+                success: false,
+                error: error instanceof Error ? error.message : "Transfer failed"
+            });
+        } finally {
+            setIsTransferring(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="grid gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        From Address (Your Wallet Address)
+                    </label>
+                    <input
+                        type="text"
+                        value={fromAddress}
+                        onChange={(e) => setFromAddress(e.target.value)}
+                        placeholder="0x..."
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        To Address (Recipient)
+                    </label>
+                    <input
+                        type="text"
+                        value={toAddress}
+                        onChange={(e) => setToAddress(e.target.value)}
+                        placeholder="0x..."
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        Amount (AVAX)
+                    </label>
+                    <input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.1"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
+
+                <button
+                    onClick={handleTransfer}
+                    disabled={isTransferring || !fromAddress || !toAddress || !amount}
+                    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
+                >
+                    {isTransferring ? "Transferring..." : "Transfer AVAX"}
+                </button>
+            </div>
+
+            {transferResult && (
+                <div className={`p-4 rounded ${transferResult.success ? 'bg-green-900 border border-green-700' : 'bg-red-900 border border-red-700'}`}>
+                    {transferResult.success ? (
+                        <div>
+                            <h3 className="font-bold text-green-100 mb-2">✅ Transfer Successful!</h3>
+                            <div className="text-sm text-green-200 space-y-1">
+                                <p><strong>Transaction Hash:</strong> {transferResult.transactionHash}</p>
+                                <p><strong>Block Number:</strong> {transferResult.blockNumber}</p>
+                                <p><strong>Amount:</strong> {transferResult.amount} AVAX</p>
+                                <p><strong>From:</strong> {transferResult.from}</p>
+                                <p><strong>To:</strong> {transferResult.to}</p>
+                                {transferResult.gasUsed && <p><strong>Gas Used:</strong> {transferResult.gasUsed}</p>}
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <h3 className="font-bold text-red-100 mb-2">❌ Transfer Failed</h3>
+                            <p className="text-sm text-red-200">{transferResult.error}</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function App() {
     
     const [clientInfo, setClientInfo] = useState<any>(null);
@@ -151,6 +271,12 @@ export function App() {
                 <div className="my-2 p-3 bg-red-900 rounded text-zinc-100">
                     <h2 className="font-bold mb-4">Fund Wallet</h2>
                     <FundKonviWallet />
+                </div>
+
+                {/* AVAX Transfer Section */}
+                <div className="my-8 p-4 bg-blue-900 rounded text-zinc-100">
+                    <h2 className="font-bold mb-4">Transfer AVAX</h2>
+                    <AVAXTransfer />
                 </div>
 
                 {/* Client Block */}

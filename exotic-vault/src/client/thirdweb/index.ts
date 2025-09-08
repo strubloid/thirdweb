@@ -1,4 +1,4 @@
-import { createThirdwebClient, Engine, getUser, NATIVE_TOKEN_ADDRESS } from "thirdweb";
+import { createThirdwebClient, Engine, getUser, NATIVE_TOKEN_ADDRESS, prepareTransaction, sendAndConfirmTransaction, toWei } from "thirdweb";
 import { getProfiles, inAppWallet, getWalletBalance } from "thirdweb/wallets";
 import { avalanche, avalancheFuji } from "thirdweb/chains";
 import { unlinkProfile } from "thirdweb/wallets/in-app";
@@ -427,6 +427,71 @@ export class ThirdwebClient {
             console.log(" New IN APP WALLET:", account);
         } catch (authError) {
             console.error("❌ Backend authentication failed:", authError);
+        }
+    }
+
+    /**
+     * Transfer AVAX from one address to another
+     * @param fromAddress - The address to send AVAX from (must have private key access)
+     * @param toAddress - The address to receive AVAX
+     * @param amount - Amount of AVAX to send (in AVAX, not wei)
+     * @returns Transaction receipt
+     */
+    async transferAVAX(fromAddress: string, toAddress: string, amount: string) {
+        try {
+            
+            console.log(`Starting AVAX transfer from ${fromAddress} to ${toAddress}...`);
+            console.log(`Amount: ${amount} AVAX`);
+
+            // Get the wallet account for the fromAddress
+            // Note: This assumes you have access to the private key through your in-app wallet system
+            const userInAppWallet = await this.getInAppWallet(this.jwtToken);
+            
+            if (!userInAppWallet || userInAppWallet.address.toLowerCase() !== fromAddress.toLowerCase()) {
+                throw new Error(`No access to wallet ${fromAddress}. Current wallet: ${userInAppWallet?.address}`);
+            }
+
+            // Prepare the transaction, we convert to Wei as Blockchain dont't handle deciamls number
+            // natively, wei is the smallest unit of the currency (Eg. AVAX = Dollars ($1.50) | Wei = Cents 150 cents)
+            const transaction = prepareTransaction({
+                to: toAddress,
+                value: toWei(amount),
+                chain: this.chain,
+                client: this.client,
+            });
+
+
+            console.log("Sending transaction...");
+
+            // Send and confirm the transaction
+            const receipt = await sendAndConfirmTransaction({
+                transaction,
+                account: userInAppWallet,
+            });
+
+            console.log("✅ Transfer successful!");
+            console.log("Transaction hash:", receipt.transactionHash);
+            console.log("Block number:", receipt.blockNumber);
+
+            return {
+                success: true,
+                transactionHash: receipt.transactionHash,
+                blockNumber: receipt.blockNumber,
+                gasUsed: receipt.gasUsed?.toString(),
+                from: fromAddress,
+                to: toAddress,
+                amount: amount,
+            };
+
+        } catch (error) {
+            console.error("❌ Error transferring AVAX:", error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Unknown error occurred",
+                from: fromAddress,
+                to: toAddress,
+                amount: amount,
+            };
         }
     }
 }
