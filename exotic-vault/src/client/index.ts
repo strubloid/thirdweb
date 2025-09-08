@@ -22,6 +22,15 @@ class ClientManager {
     }
 
     /**
+     * Get all server wallets
+     * @returns The server wallet instance.
+     */
+    async getServerWallets() {
+        this.serverWallet = await this.thirdwebClient.getServerWallets();
+        return this.serverWallet;
+    }
+
+      /**
      * Get the server wallet instance.
      * @returns The server wallet instance.
      */
@@ -53,8 +62,8 @@ class ClientManager {
     }
 
     // Transfer AVAX function
-    async transferAVAX(fromAddress: string, toAddress: string, amount: string) {
-        return await this.thirdwebClient.transferAVAX(fromAddress, toAddress, amount);
+    async transferAVAX(toAddress: string, amount: string, useServerWallet: boolean = true, fromAddress: string = '' ) {
+        return await this.thirdwebClient.transferAVAX(toAddress, amount, useServerWallet, fromAddress);
     }
 }
 

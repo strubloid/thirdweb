@@ -6,59 +6,63 @@ import thirdwebIcon from "./thirdweb.svg";
 import React, { useEffect, useState } from "react";
 import { client } from "./client";
 
-// Create the thirdweb client for the BuyWidget
-const thirdwebClient = createThirdwebClient({
-  clientId: "bb0a679a087e19d585b267e1b9275a70", // Your TestWallet project client ID
-});
-
 function FundKonviWallet() {
-  const faucets = [
-    {
-      name: "Avalanche Official Faucet",
-      url: "https://faucet.avax.network/",
-      description: "Official Avalanche faucet - requires Core wallet connection"
-    },
-    {
-      name: "Chainlink Faucet", 
-      url: "https://faucets.chain.link/fuji",
-      description: "Chainlink's Fuji testnet faucet - requires GitHub account"
-    }
-  ];
+    const faucets = [
+        {
+            name: "Avalanche Official Faucet",
+            url: "https://faucet.avax.network/",
+            description:
+                "Official Avalanche faucet - requires Core wallet connection",
+        },
+        {
+            name: "Chainlink Faucet",
+            url: "https://faucets.chain.link/fuji",
+            description:
+                "Chainlink's Fuji testnet faucet - requires GitHub account",
+        },
+    ];
 
-  return (
-    <div className="space-y-4">
-      
-      {faucets.map((faucet, index) => (
-        <div key={index} className="border border-zinc-700 rounded-lg p-4 hover:border-zinc-600 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h3 className="font-semibold text-white mb-1">{faucet.name}</h3>
-              <p className="text-sm text-zinc-400">{faucet.description}</p>
-            </div>
-            <a
-              href={faucet.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-sm"
-            >
-              Get AVAX
-            </a>
-          </div>
+    return (
+        <div className="space-y-4">
+            {faucets.map((faucet, index) => (
+                <div
+                    key={index}
+                    className="border border-zinc-700 rounded-lg p-4 hover:border-zinc-600 transition-colors"
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-white mb-1">
+                                {faucet.name}
+                            </h3>
+                            <p className="text-sm text-zinc-400">
+                                {faucet.description}
+                            </p>
+                        </div>
+                        <a
+                            href={faucet.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-sm"
+                        >
+                            Get AVAX
+                        </a>
+                    </div>
+                </div>
+            ))}
         </div>
-      ))}
-    </div>
-  );
+    );
 }
 
 function AVAXTransfer() {
     const [fromAddress, setFromAddress] = useState("");
     const [toAddress, setToAddress] = useState("");
     const [amount, setAmount] = useState("");
+    const [useServerWallet, setUseServerWallet] = useState(false);
     const [isTransferring, setIsTransferring] = useState(false);
     const [transferResult, setTransferResult] = useState<any>(null);
 
     const handleTransfer = async () => {
-        if (!fromAddress || !toAddress || !amount) {
+        if (!toAddress || !amount) {
             alert("Please fill in all fields");
             return;
         }
@@ -72,9 +76,17 @@ function AVAXTransfer() {
         setTransferResult(null);
 
         try {
-            const result = await client.transferAVAX(fromAddress, toAddress, amount);
+
+            const result = await client.transferAVAX(
+                toAddress,
+                amount,
+                useServerWallet,
+                fromAddress
+            );
             setTransferResult(result);
-            
+            console.log(' CHECK HERE  RESULT ')
+            console.log(result)
+
             if (result.success) {
                 // Clear form on success
                 setFromAddress("");
@@ -84,7 +96,8 @@ function AVAXTransfer() {
         } catch (error) {
             setTransferResult({
                 success: false,
-                error: error instanceof Error ? error.message : "Transfer failed"
+                error:
+                    error instanceof Error ? error.message : "Transfer failed",
             });
         } finally {
             setIsTransferring(false);
@@ -95,16 +108,38 @@ function AVAXTransfer() {
         <div className="space-y-4">
             <div className="grid gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-zinc-300 mb-2">
-                        From Address (Your Wallet Address)
-                    </label>
-                    <input
-                        type="text"
-                        value={fromAddress}
-                        onChange={(e) => setFromAddress(e.target.value)}
-                        placeholder="0x..."
-                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white placeholder-zinc-400 focus:border-blue-500 focus:outline-none"
-                    />
+                    {!useServerWallet && (
+                        <>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                            From Address (Your Wallet Address)
+                            </label>
+                            <input type="text"
+                                value={fromAddress}
+                                onChange={(e) => setFromAddress(e.target.value)}
+                                placeholder="0x..."
+                                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white placeholder-zinc-400 focus:border-blue-500 focus:outline-none" />
+
+                        </>
+                    )}
+                    
+                    {/* Server Wallet Checkbox */}
+                    <div className="mt-3 flex items-center">
+                        <input
+                            type="checkbox"
+                            id="useServerWallet"
+                            checked={useServerWallet}
+                            onChange={(e) =>
+                                setUseServerWallet(e.target.checked)
+                            }
+                            className="mr-2 w-4 h-4 text-blue-600 bg-zinc-800 border-zinc-600 rounded focus:ring-blue-500 focus:ring-2"
+                        />
+                        <label
+                            htmlFor="useServerWallet"
+                            className="text-sm text-zinc-300"
+                        >
+                            Use Server Wallet Address
+                        </label>
+                    </div>
                 </div>
 
                 <div>
@@ -137,7 +172,9 @@ function AVAXTransfer() {
 
                 <button
                     onClick={handleTransfer}
-                    disabled={isTransferring || !fromAddress || !toAddress || !amount}
+                    disabled={
+                        isTransferring || !toAddress || !amount
+                    }
                     className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
                 >
                     {isTransferring ? "Transferring..." : "Transfer AVAX"}
@@ -145,23 +182,53 @@ function AVAXTransfer() {
             </div>
 
             {transferResult && (
-                <div className={`p-4 rounded ${transferResult.success ? 'bg-green-900 border border-green-700' : 'bg-red-900 border border-red-700'}`}>
+                <div
+                    className={`p-4 rounded ${
+                        transferResult.success
+                            ? "bg-green-900 border border-green-700"
+                            : "bg-red-900 border border-red-700"
+                    }`}
+                >
                     {transferResult.success ? (
                         <div>
-                            <h3 className="font-bold text-green-100 mb-2">✅ Transfer Successful!</h3>
+                            <h3 className="font-bold text-green-100 mb-2">
+                                ✅ Transfer Successful!
+                            </h3>
                             <div className="text-sm text-green-200 space-y-1">
-                                <p><strong>Transaction Hash:</strong> {transferResult.transactionHash}</p>
-                                <p><strong>Block Number:</strong> {transferResult.blockNumber}</p>
-                                <p><strong>Amount:</strong> {transferResult.amount} AVAX</p>
-                                <p><strong>From:</strong> {transferResult.from}</p>
-                                <p><strong>To:</strong> {transferResult.to}</p>
-                                {transferResult.gasUsed && <p><strong>Gas Used:</strong> {transferResult.gasUsed}</p>}
+                                <p>
+                                    <strong>Transaction Hash:</strong>{" "}
+                                    {transferResult.transactionHash}
+                                </p>
+                                <p>
+                                    <strong>Block Number:</strong>{" "}
+                                    {transferResult.blockNumber}
+                                </p>
+                                <p>
+                                    <strong>Amount:</strong>{" "}
+                                    {transferResult.amount} AVAX
+                                </p>
+                                <p>
+                                    <strong>From:</strong> {transferResult.from}
+                                </p>
+                                <p>
+                                    <strong>To:</strong> {transferResult.to}
+                                </p>
+                                {transferResult.gasUsed && (
+                                    <p>
+                                        <strong>Gas Used:</strong>{" "}
+                                        {transferResult.gasUsed}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     ) : (
                         <div>
-                            <h3 className="font-bold text-red-100 mb-2">❌ Transfer Failed</h3>
-                            <p className="text-sm text-red-200">{transferResult.error}</p>
+                            <h3 className="font-bold text-red-100 mb-2">
+                                ❌ Transfer Failed
+                            </h3>
+                            <p className="text-sm text-red-200">
+                                {transferResult.error}
+                            </p>
                         </div>
                     )}
                 </div>
@@ -171,10 +238,9 @@ function AVAXTransfer() {
 }
 
 export function App() {
-    
     const [clientInfo, setClientInfo] = useState<any>(null);
     const [loadingClient, setLoadingClient] = useState(true);
-    
+
     const [serverWallet, setServerWallet] = useState<any>(null);
     const [loadingServerWallet, setLoadingServerWallet] = useState(true);
 
@@ -183,11 +249,10 @@ export function App() {
 
     useEffect(() => {
         async function fetchData() {
-            
             setClientInfo(client.getClient());
             setLoadingClient(false);
 
-            setServerWallet(await client.getServerWallet());
+            setServerWallet(await client.getServerWallets());
             setLoadingServerWallet(false);
 
             setInAppWallet(await client.getInAppWallets());
@@ -198,10 +263,9 @@ export function App() {
 
     // This will handle the reload wallets button click
     const clickReloadServerWallet = async () => {
-
         setLoadingServerWallet(true);
         setServerWallet(null);
-        const serverWallet = await client.getServerWallet();
+        const serverWallet = await client.getServerWallets();
 
         setTimeout(() => {
             setServerWallet(serverWallet);
@@ -211,7 +275,6 @@ export function App() {
 
     // This will handle the reload wallets button click
     const clickReloadInAppWallet = async () => {
-
         setLoadingInAppWallet(true);
         setInAppWallet(null);
         const wallet = await client.getInAppWallets();
@@ -220,14 +283,12 @@ export function App() {
             setInAppWallet(wallet);
             setLoadingInAppWallet(false);
         }, 1000);
-
     };
 
     /**
      * This will handle the clean inAppWallets button click
      */
     const clickCleanInAppWallet = async () => {
-
         setLoadingInAppWallet(true);
         setInAppWallet(null);
 
@@ -238,14 +299,12 @@ export function App() {
             setInAppWallet(wallets);
             setLoadingInAppWallet(false);
         }, 1000);
-
     };
 
     /**
      * This will handle the add inAppWallet button click
      */
     const clickAddInAppWallet = async () => {
-        
         setLoadingInAppWallet(true);
         setInAppWallet(null);
 
@@ -291,11 +350,9 @@ export function App() {
                     )}
                 </div>
 
-                
-
                 {/* ServerWallet Block */}
                 <div className="my-8 p-4 bg-zinc-800 rounded text-zinc-100">
-                    <h2 className="font-bold mb-2">Server Wallet</h2>
+                    <h2 className="font-bold mb-2">Server Wallets</h2>
                     {loadingServerWallet ? (
                         <span>Loading wallet...</span>
                     ) : (
@@ -327,11 +384,11 @@ function Header({
     clickReloadServerWallet,
     clickReloadInAppWallet,
     clickCleanInAppWallet,
-    clickAddInAppWallet
+    clickAddInAppWallet,
 }: {
     clickReloadServerWallet: () => Promise<void>;
     clickReloadInAppWallet: () => Promise<void>;
-    clickCleanInAppWallet: () => Promise<void>; 
+    clickCleanInAppWallet: () => Promise<void>;
     clickAddInAppWallet: () => Promise<void>;
 }) {
     return (

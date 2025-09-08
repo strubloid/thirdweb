@@ -1,8 +1,8 @@
 import { createThirdwebClient, Engine, getUser, NATIVE_TOKEN_ADDRESS, prepareTransaction, sendAndConfirmTransaction, toWei } from "thirdweb";
-import { getProfiles, inAppWallet, getWalletBalance } from "thirdweb/wallets";
+import { getProfiles, inAppWallet, getWalletBalance, Account, privateKeyToAccount } from "thirdweb/wallets";
 import { avalanche, avalancheFuji } from "thirdweb/chains";
 import { unlinkProfile } from "thirdweb/wallets/in-app";
-import { THIRDWEB_CLIENT_ID, THIRDWEB_CLIENT_SECRET } from "../variables";
+import { THIRDWEB_CHAIN, THIRDWEB_CLIENT_ID, THIRDWEB_CLIENT_SECRET, THIRDWEB_SERVER_WALLET_ADDRESS } from "../variables";
 import { convertCryptoToFiat } from "thirdweb/pay";
 
 type ThirdwebUserProfile =
@@ -25,17 +25,31 @@ export class ThirdwebClient {
     chain: any;
     developerMode: boolean = true;
     wallets: any | null = null;
-
+    serverWalletAddress: string;
     userInAppWallet: any | null = null;
     serverWallet: any | null = null;
+    serverWallets: any[] | null = null;
     jwtToken: string;
 
     constructor() {
+
         this.clientId = THIRDWEB_CLIENT_ID;
         this.clientSecret = THIRDWEB_CLIENT_SECRET;
+        this.serverWalletAddress = THIRDWEB_SERVER_WALLET_ADDRESS;
+
+        console.log(this.clientSecret)
+
+        const serverAccount = privateKeyToAccount(this.clientSecret);
+
+
+        // const serverAccount = privateKeyToAccount({
+        //     client: this.client, 
+        //     privateKey: this.clientSecret,
+        // });
+        console.log("Server Account: KKKKKKKKKKKKKKKKK ", serverAccount);
 
         // loading the chain based on the developer mode
-        this.chain = this.developerMode ? avalancheFuji : avalanche;
+        this.chain = this.developerMode || THIRDWEB_CHAIN == "avalanche-fuji" ? avalancheFuji : avalanche;
 
         // FIXME: at the app, change for the request token
         this.jwtToken = "1234";
@@ -54,14 +68,36 @@ export class ThirdwebClient {
     /**
      * Loading the server wallet
      */
-    async getServerWallet() {
-        if (!this.serverWallet) {
-            this.serverWallet = await Engine.getServerWallets({
+    async getServerWallets() {
+        if (!this.serverWallets) {
+            const response = await Engine.getServerWallets({
                 client: this.client,
             });
+            this.serverWallets = response.accounts;
         }
+        return this.serverWallets;
+    }
+
+    /**
+     * This will get the first server wallet of the collection
+     * and return as the main wallet.
+     * @returns wallet instance
+     */
+    /**
+     * This will get an address server wallet and get the reference of it.
+     * @param walletAddress loads this address.
+     * @returns 
+     */
+    async getServerWallet(walletAddress: string = '') {
+
+        this.serverWallet = await Engine.serverWallet({
+            client: this.client,
+            address: walletAddress
+        });
+
         return this.serverWallet;
     }
+
 
     /**
      * Loading the in-app wallet
@@ -163,25 +199,6 @@ export class ThirdwebClient {
         console.log(" IN APP WALLET:", account);
         return account;
     }
-
-    // getting all profiles
-    // this.profiles = await getProfiles({
-    //     client: this.client,
-    // });
-
-    // if (!this.serverWallet) {
-    //     this.serverWallet = await Engine.getServerWallets({
-    //         client: this.client,
-    //     });
-    // }
-
-    // if (!this.wallets) {
-    //     this.wallets = await getProfiles({
-    //         client: this.getClient(),
-    //     });
-    //     this.wallets = [];
-    // }
-    // return this.wallets;
 
     async getInAppBalance() {
         try {
@@ -432,41 +449,42 @@ export class ThirdwebClient {
 
     /**
      * Transfer AVAX from one address to another
-     * @param fromAddress - The address to send AVAX from (must have private key access)
      * @param toAddress - The address to receive AVAX
      * @param amount - Amount of AVAX to send (in AVAX, not wei)
+     * @param useServerWallet - Whether to use server wallet instead of in-app wallet
+     * @param fromAddress - The address to send AVAX from (must have private key access)
      * @returns Transaction receipt
      */
-    async transferAVAX(fromAddress: string, toAddress: string, amount: string) {
+    async transferAVAX(toAddress: string, amount: string, useServerWallet: boolean = true, fromAddress: string = '' ) 
+    {
         try {
-            
-            console.log(`Starting AVAX transfer from ${fromAddress} to ${toAddress}...`);
-            console.log(`Amount: ${amount} AVAX`);
 
-            // Get the wallet account for the fromAddress
-            // Note: This assumes you have access to the private key through your in-app wallet system
-            const userInAppWallet = await this.getInAppWallet(this.jwtToken);
-            
-            if (!userInAppWallet || userInAppWallet.address.toLowerCase() !== fromAddress.toLowerCase()) {
-                throw new Error(`No access to wallet ${fromAddress}. Current wallet: ${userInAppWallet?.address}`);
-            }
+            // loading information to transfering
+            let transferingTo = toAddress;
 
+            // We can load a specific serverWallet or another one if passed the address
+            let transferingFrom : Account = (useServerWallet) ? await this.getServerWallet(this.serverWalletAddress) : await this.getServerWallet(fromAddress);         
+       
+            // Account
+            console.log(transferingFrom)
+            console.log(this.chain)
+            
             // Prepare the transaction, we convert to Wei as Blockchain dont't handle deciamls number
             // natively, wei is the smallest unit of the currency (Eg. AVAX = Dollars ($1.50) | Wei = Cents 150 cents)
             const transaction = prepareTransaction({
-                to: toAddress,
+                to: transferingTo,
                 value: toWei(amount),
                 chain: this.chain,
                 client: this.client,
             });
 
-
-            console.log("Sending transaction...");
+            console.log(`Starting AVAX transfer from ${transferingFrom?.address} to ${transferingTo}...`);
+            console.log(`Amount: ${amount} AVAX`);
 
             // Send and confirm the transaction
             const receipt = await sendAndConfirmTransaction({
                 transaction,
-                account: userInAppWallet,
+                account: transferingFrom,
             });
 
             console.log("✅ Transfer successful!");
