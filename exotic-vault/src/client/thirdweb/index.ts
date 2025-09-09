@@ -508,7 +508,7 @@ export class ThirdwebActions {
             client: this.getClient(),
         });
 
-        console.log('walletProfiles 3');
+        console.log('walletProfiles');
         console.log(walletProfiles);
 
         // this will delete all profiles (if exist) using the unlink profile approach
