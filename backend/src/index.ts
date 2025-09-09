@@ -11,22 +11,26 @@ type CreatedWallet = { address: string; privateKey: `0x${string}` };
 async function createLocalServerWallet(): Promise<CreatedWallet> {
   
   console.log('Creating local server wallet...');
-  
-//   const client = createThirdwebClient({
-//     // On server, prefer SECRET key. CLIENT_ID optional here.
-//     secretKey: process.env.VITE_THIRDWEB_CLIENT_SECRET!,
-//     clientId: process.env.VITE_THIRDWEB_CLIENT_ID
-//   });
+  const client = createThirdwebClient({
+    // On server, prefer SECRET key. CLIENT_ID optional here.
+    secretKey: process.env.VITE_THIRDWEB_CLIENT_SECRET!,
+    clientId: process.env.VITE_THIRDWEB_CLIENT_ID
+  });
+  // console.log('Thirdweb client created.');
+  // console.log(client)
 
-//   // 1) Generate a new EOA private key that YOU control
-//   const privateKey = generatePrivateKey();
+  // 1) Generate a new private key that YOU control
+  const privateKey = generatePrivateKey();
+  // console.log('Private key created.');
+  // console.log(privateKey)
 
-//   // 2) Turn it into a thirdweb Account bound to this client
-//   const account = privateKeyToAccount({ client, privateKey });
+  // 2) Turn it into a thirdweb Account bound to this client
+  const account = privateKeyToAccount({ client, privateKey });
+  // console.log('Account created from private key.');
+  // console.log(account)
 
   // 3) Return both address + private key
-//   return { address: account.address, privateKey };
-  return { address: "address", privateKey: "0x1234" };
+  return { address: account.address, privateKey };
 }
 
 (async () => {

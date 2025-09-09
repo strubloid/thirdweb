@@ -244,6 +244,9 @@ export function App() {
     const [serverWallet, setServerWallet] = useState<any>(null);
     const [loadingServerWallet, setLoadingServerWallet] = useState(true);
 
+    const [loadingInAppWalletInEuros, setLoadingInAppWalletInEuros] = useState(true);
+    const [inAppWalletInEuros, setInAppWalletInEuros] = useState<any>(null);
+
     const [inAppWallet, setInAppWallet] = useState<any>(null);
     const [loadingInAppWallet, setLoadingInAppWallet] = useState(true);
 
@@ -272,6 +275,20 @@ export function App() {
             setLoadingServerWallet(false);
         }, 1000);
     };
+
+    const clickGetInAppWalletInEuros = async () => {
+        setLoadingInAppWalletInEuros(true);
+        
+        const inAppWalletInEuros = await client.getInAppBalance();
+        console.log(inAppWalletInEuros);
+
+        setTimeout(() => {
+            setLoadingInAppWalletInEuros(false);
+            setInAppWalletInEuros(inAppWalletInEuros);
+        }, 1000);
+    };
+
+    
 
     // This will handle the reload wallets button click
     const clickReloadInAppWallet = async () => {
@@ -325,18 +342,11 @@ export function App() {
                     clickReloadInAppWallet={clickReloadInAppWallet}
                     clickCleanInAppWallet={clickCleanInAppWallet}
                     clickAddInAppWallet={clickAddInAppWallet}
+                    clickGetInAppWalletInEuros={clickGetInAppWalletInEuros}
                 />
-                {/* Fund Wallet Section */}
-                <div className="my-2 p-3 bg-red-900 rounded text-zinc-100">
-                    <h2 className="font-bold mb-4">Fund Wallet</h2>
-                    <FundKonviWallet />
-                </div>
+                
 
-                {/* AVAX Transfer Section */}
-                <div className="my-8 p-4 bg-blue-900 rounded text-zinc-100">
-                    <h2 className="font-bold mb-4">Transfer AVAX</h2>
-                    <AVAXTransfer />
-                </div>
+                
 
                 {/* Client Block */}
                 <div className="my-8 p-4 bg-zinc-900 rounded text-zinc-100">
@@ -374,6 +384,30 @@ export function App() {
                     )}
                 </div>
 
+                {/* InAppWallet Value */}
+                <div className="my-8 p-4 bg-zinc-500 rounded text-zinc-100">
+                    <h2 className="font-bold mb-2">Balance in Euros</h2>
+                    {loadingInAppWalletInEuros ? (
+                        <span>Not Loaded yet, please click the button to load</span>
+                    ) : (
+                        <pre className="overflow-x-auto text-xs">
+                            {JSON.stringify(inAppWalletInEuros, null, 2)}
+                        </pre>
+                    )}
+                </div>
+
+                {/* Fund Wallet Section */}
+                <div className="my-2 p-3 bg-red-900 rounded text-zinc-100">
+                    <h2 className="font-bold mb-4">Fund Wallet</h2>
+                    <FundKonviWallet />
+                </div>
+
+                {/* AVAX Transfer Section */}
+                <div className="my-8 p-4 bg-blue-900 rounded text-zinc-100">
+                    <h2 className="font-bold mb-4">Transfer AVAX</h2>
+                    <AVAXTransfer />
+                </div>
+
                 <ThirdwebResources />
             </div>
         </main>
@@ -385,11 +419,13 @@ function Header({
     clickReloadInAppWallet,
     clickCleanInAppWallet,
     clickAddInAppWallet,
+    clickGetInAppWalletInEuros,
 }: {
     clickReloadServerWallet: () => Promise<void>;
     clickReloadInAppWallet: () => Promise<void>;
     clickCleanInAppWallet: () => Promise<void>;
     clickAddInAppWallet: () => Promise<void>;
+    clickGetInAppWalletInEuros: () => Promise<void>;
 }) {
     return (
         <header className="flex flex-col items-center mb-20 md:mb-20">
@@ -431,6 +467,12 @@ function Header({
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
                 >
                     Add a Wallet
+                </button>
+                <button
+                    onClick={clickGetInAppWalletInEuros}
+                    className="px-4 py-2 bg-orange-500 hover:bg-green-700 text-white rounded transition-colors"
+                >
+                    Value in in-app Wallet
                 </button>
             </div>
         </header>

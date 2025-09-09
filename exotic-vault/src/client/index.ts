@@ -1,16 +1,16 @@
-import { ThirdwebClient } from "./thirdweb";
+import { ThirdwebActions } from "./thirdweb";
 import React, { useEffect, useState } from "react";
 
 class ClientManager {
     client: any = null;
-    thirdwebClient: ThirdwebClient;
+    thirdwebActions: ThirdwebActions;
 
     serverWallet: any = null;
     inAppWallet: any = null;
 
     constructor() {
-        this.thirdwebClient = new ThirdwebClient();
-        this.client = this.thirdwebClient.getClient();
+        this.thirdwebActions = new ThirdwebActions();
+        this.client = this.thirdwebActions.getClient();
     }
 
     /**
@@ -26,16 +26,16 @@ class ClientManager {
      * @returns The server wallet instance.
      */
     async getServerWallets() {
-        this.serverWallet = await this.thirdwebClient.getServerWallets();
+        this.serverWallet = await this.thirdwebActions.getServerWallets();
         return this.serverWallet;
     }
 
-      /**
+    /**
      * Get the server wallet instance.
      * @returns The server wallet instance.
      */
     async getServerWallet() {
-        this.serverWallet = await this.thirdwebClient.getServerWallet();
+        this.serverWallet = await this.thirdwebActions.getServerWallet();
         return this.serverWallet;
     }
 
@@ -44,26 +44,50 @@ class ClientManager {
      * @returns The in-app wallet instance.
      */
     async getInAppWallets() {
-
         // loading the in-app wallet
-        this.inAppWallet = await this.thirdwebClient.getInAppWallets();
+        this.inAppWallet = await this.thirdwebActions.getInAppWallets();
         return this.inAppWallet;
     }
 
-    // Clean inAppWallets function
+    /**
+     * This is the way to clean it up all wallets
+     * this is more to be used at test environment.
+     */
     async cleanInAppWallet() {
-        await this.thirdwebClient.cleanInAppWallet();
-        this.inAppWallet = this.thirdwebClient.wallets;
+        await this.thirdwebActions.removeAllInAppWallets();
+        this.inAppWallet = this.thirdwebActions.wallets;
     }
 
     // Clean all wallets function
     async addInAppWallet() {
-        await this.thirdwebClient.addInAppWallet();
+        await this.thirdwebActions.addInAppWallet();
     }
 
     // Transfer AVAX function
-    async transferAVAX(toAddress: string, amount: string, useServerWallet: boolean = true, fromAddress: string = '' ) {
-        return await this.thirdwebClient.transferAVAX(toAddress, amount, useServerWallet, fromAddress);
+    async transferAVAX(
+        toAddress: string,
+        amount: string,
+        useServerWallet: boolean = true,
+        fromAddress: string = ""
+    ) {
+        // this.thirdwebActions.inintialize();
+        return await this.thirdwebActions.transferAVAX(
+            toAddress,
+            amount,
+            useServerWallet,
+            fromAddress
+        );
+    }
+
+    /**
+     * Get the balance of the in-app wallet in Euros.
+     * @returns The balance of the in-app wallet in Euros.
+     */
+    async getInAppBalance() {
+        let balance = await this.thirdwebActions.getInAppBalance("EUR");
+        console.log("balance in euros:");
+        console.log(balance);
+        return balance;
     }
 }
 

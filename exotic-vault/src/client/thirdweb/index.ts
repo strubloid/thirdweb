@@ -1,23 +1,49 @@
-import { createThirdwebClient, Engine, getUser, NATIVE_TOKEN_ADDRESS, prepareTransaction, sendAndConfirmTransaction, toWei } from "thirdweb";
-import { getProfiles, inAppWallet, getWalletBalance, Account, privateKeyToAccount } from "thirdweb/wallets";
+import {
+    createThirdwebClient,
+    Engine,
+    getUser,
+    NATIVE_TOKEN_ADDRESS,
+    prepareTransaction,
+    sendAndConfirmTransaction,
+    toWei,
+    Chain,
+    ThirdwebClient
+} from "thirdweb";
+import {
+    inAppWallet,
+    getWalletBalance,
+    Account,
+    getProfiles,
+} from "thirdweb/wallets";
 import { avalanche, avalancheFuji } from "thirdweb/chains";
-import { unlinkProfile } from "thirdweb/wallets/in-app";
-import { THIRDWEB_CHAIN, THIRDWEB_CLIENT_ID, THIRDWEB_CLIENT_SECRET, THIRDWEB_SERVER_WALLET_ADDRESS } from "../variables";
+import { unlinkProfile, authenticate } from "thirdweb/wallets/in-app";
+
+import {
+    THIRDWEB_CHAIN,
+    THIRDWEB_CLIENT_ID,
+    THIRDWEB_CLIENT_SECRET,
+    THIRDWEB_SERVER_WALLET_ADDRESS,
+} from "../variables";
 import { convertCryptoToFiat } from "thirdweb/pay";
+import { InAppWallet } from "thirdweb/dist/types/wallets/in-app/core/wallet/types";
 
-type ThirdwebUserProfile =
-    | { type: "email"; email: string; emailVerified?: boolean }
-    | { type: "phone"; phone: string }
-    | { type: string; [k: string]: unknown };
-
-export type ThirdwebUser = {
-    address: string;
-    smartWalletAddress?: string | null;
-    createdAt: string;
-    profiles: ThirdwebUserProfile[];
+export type ThirdwebUserProfile = {
+  id: string;
+  type: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-export class ThirdwebClient {
+export type ThirdwebUser = {
+  address: `0x${string}`;
+  createdAt: string;
+  profiles: ThirdwebUserProfile[];
+  updatedAt?: string;
+  metadata?: Record<string, any>;
+};
+
+
+export class ThirdwebActions {
     clientId: string;
     clientSecret: string;
     client: any | null = null;
@@ -26,151 +52,103 @@ export class ThirdwebClient {
     developerMode: boolean = true;
     wallets: any | null = null;
     serverWalletAddress: string;
-    userInAppWallet: any | null = null;
-    serverWallet: any | null = null;
-    serverWallets: any[] | null = null;
+    // userInAppWallet: any | null = null;
+    // serverWallet: any | null = null;
     jwtToken: string;
 
-    constructor() {
+    inAppConfiguration: InAppWallet | null = null;
+    inAppAccount: Account | null = null;
 
+    private _initialized: boolean = false;
+
+    constructor() {
         this.clientId = THIRDWEB_CLIENT_ID;
         this.clientSecret = THIRDWEB_CLIENT_SECRET;
         this.serverWalletAddress = THIRDWEB_SERVER_WALLET_ADDRESS;
 
-        console.log(this.clientSecret)
-
-        const serverAccount = privateKeyToAccount(this.clientSecret);
-
-
-        // const serverAccount = privateKeyToAccount({
-        //     client: this.client, 
-        //     privateKey: this.clientSecret,
-        // });
-        console.log("Server Account: KKKKKKKKKKKKKKKKK ", serverAccount);
-
         // loading the chain based on the developer mode
-        this.chain = this.developerMode || THIRDWEB_CHAIN == "avalanche-fuji" ? avalancheFuji : avalanche;
+        this.chain =
+            this.developerMode || THIRDWEB_CHAIN == "avalanche-fuji"
+                ? avalancheFuji
+                : avalanche;
 
         // FIXME: at the app, change for the request token
-        this.jwtToken = "1234";
+        this.jwtToken = "12345678901234567890";
 
-        // loading the client
-        this.client = createThirdwebClient({
-            clientId: this.clientId,
-            secretKey: this.clientSecret,
-        });
+        // connecting to thirdweb client
+        this.connectThirdWebClient();
     }
 
-    getClient() {
+
+
+    /**
+     * Connects to the thirdweb client.
+     * @returns the thirdweb client instance
+     */
+    connectThirdWebClient() {
+        // this will run once, so we are sure to only have one call
+        if (this.client == null) {
+            this.client = createThirdwebClient({
+                clientId: this.clientId,
+                secretKey: this.clientSecret,
+            });
+        }
         return this.client;
     }
 
     /**
-     * Loading the server wallet
+     * This will get the in-app wallet configuration.
+     * @returns the in-app wallet configuration
      */
-    async getServerWallets() {
-        if (!this.serverWallets) {
-            const response = await Engine.getServerWallets({
-                client: this.client,
+    getInAppConfiguration()
+    {
+        if (this.inAppConfiguration == null) {
+            // Load the in-app wallet configuration
+            this.inAppConfiguration = inAppWallet({
+                auth: {
+                    options: ["backend"],
+                },
+                executionMode: {
+                    mode: "EIP4337",
+                    smartAccount: {
+                        chain: this.chain,
+                        sponsorGas: true,
+                    },
+                },    
             });
-            this.serverWallets = response.accounts;
         }
-        return this.serverWallets;
+
+        return this.inAppConfiguration;
     }
 
     /**
-     * This will get the first server wallet of the collection
-     * and return as the main wallet.
-     * @returns wallet instance
+     * This will connect the in-app wallet using the JWT token
+     * @param $jwtToken a JWT token to search for the in-app wallet
+     * @returns an in-app wallet
      */
-    /**
-     * This will get an address server wallet and get the reference of it.
-     * @param walletAddress loads this address.
-     * @returns 
-     */
-    async getServerWallet(walletAddress: string = '') {
+    async connectInAppWallet(jwtToken: string) 
+    {
+        // we try to connect only if we don't have the inAppAccount
+        if (this.inAppAccount == null) {
+            
+            // inApp configuration
+            const inAppWalletObject = this.getInAppConfiguration()
 
-        this.serverWallet = await Engine.serverWallet({
-            client: this.client,
-            address: walletAddress
-        });
+            // Try to connect with JWT backend authentication
+            // this.inAppAccount = await inAppWalletObject.connect({
+            //     client: this.client,
+            //     strategy: "jwt",
+            //     jwt: jwtToken,
+            // });
 
-        return this.serverWallet;
-    }
+            // rolling back to the structure that was working
+            this.inAppAccount = await inAppWalletObject.connect({
+                client: this.client,
+                strategy: "backend",
+                walletSecret: jwtToken,
+            });
 
-
-    /**
-     * Loading the in-app wallet
-     * @returns
-     */
-    async getInAppWallets(opts?: {
-        pageSize?: number;
-        maxPages?: number;
-        filters?: Partial<{
-            address: string;
-            email: string;
-            phone: string;
-            externalWalletAddress: string;
-            id: string;
-        }>;
-    }) {
-        if (!this.userInAppWallet) {
-            const base = "https://api.thirdweb.com/v1/wallets/user";
-            const limit = Math.min(Math.max(opts?.pageSize ?? 100, 1), 100);
-            let page = 1;
-            let pagesFetched = 0;
-            const all: ThirdwebUser[] = [];
-            let hasMore = true;
-
-            while (
-                hasMore &&
-                (!opts?.maxPages || pagesFetched < opts.maxPages)
-            ) {
-                const qs = new URLSearchParams({
-                    limit: String(limit),
-                    page: String(page),
-                });
-                if (opts?.filters) {
-                    for (const [k, v] of Object.entries(opts.filters)) {
-                        if (v) qs.set(k, String(v));
-                    }
-                }
-
-                const res = await fetch(`${base}?${qs.toString()}`, {
-                    method: "GET",
-                    headers: { "x-secret-key": this.clientSecret },
-                });
-
-                if (!res.ok) {
-                    const text = await res.text();
-                    throw new Error(
-                        `thirdweb /wallets/user ${res.status}: ${text}`
-                    );
-                }
-
-                const json = (await res.json()) as {
-                    result?: {
-                        wallets?: ThirdwebUser[];
-                        pagination?: { hasMore?: boolean };
-                    };
-                };
-
-                const wallets = json.result?.wallets ?? [];
-                all.push(...wallets);
-
-                pagesFetched++;
-                page++;
-
-                // Update hasMore for next iteration
-                hasMore = Boolean(json.result?.pagination?.hasMore);
-            }
-
-            // If exist something we will add to it
-            if (all.length > 0) {
-                this.userInAppWallet = all;
-            }
         }
-        return this.userInAppWallet;
     }
 
     /**
@@ -179,307 +157,217 @@ export class ThirdwebClient {
      * @param $jwtToken a JWT token to search for the in-app wallet
      * @returns an in-app wallet
      */
-    async getInAppWallet($jwtToken: string) {
-        // getting the client and the walletSecret
-        let client = this.client;
-        let walletSecret = $jwtToken;
-        // let walletSecret = $jwtToken + "error";
+    async getInAppWallet($jwtToken: string) 
+    {
+        // this will load the inAppAccount
+        await this.connectInAppWallet($jwtToken);
 
-        // starting the inAppWallet
-        const wallet = inAppWallet();
+        // getting the inAppAccount
+        return this.inAppAccount;
+    }
 
-        // Try to connect with JWT backend authentication
-        const account = await wallet.connect({
-            client,
-            strategy: "backend",
-            walletSecret,
+    /**
+     * Gets the in-app wallet address.
+     * @param $jwtToken a JWT token to search for the in-app wallet
+     * @returns the in-app wallet address
+     */
+    async getInAppWalletAddress($jwtToken: string) 
+    {
+        // this will load the inAppAccount
+        await this.connectInAppWallet($jwtToken);
+
+        // getting the inAppAccount
+        return this.inAppAccount?.address;
+    }
+
+    /**
+     * Gets the Thirdweb client instance.
+     * @returns The Thirdweb client instance.
+     */
+    getClient() {
+        return this.client;
+    }
+
+    /**
+     * Gets the server wallets
+     * @returns The server wallets instance.
+     */
+    async getServerWallets() {
+
+        // loading the server wallets
+        const response = await Engine.getServerWallets({
+            client: this.client,
         });
 
-        // TODO: remove later
-        console.log(" IN APP WALLET:", account);
-        return account;
-    }
-
-    async getInAppBalance() {
-        try {
-            console.log("clean all in-app wallets");
-
-            // loading the client
-            const client = this.getClient();
-
-            // loading the in-app wallet
-            const userInAppWallet = await this.getInAppWallet(this.jwtToken);
-
-            const address = userInAppWallet?.address;
-
-            // loading the user data
-            const user = await getUser({
-                client,
-                walletAddress: address,
-            });
-
-            // we are loading only one chain, but we can add any other one and will return all the balances
-            let chains = [this.chain];
-
-            // getting the balances for each chain
-            const balances = await Promise.all(
-                chains.map(async (chain) => {
-                    console.log(chain);
-
-                    const native = await getWalletBalance({
-                        client,
-                        address,
-                        chain,
-                        // tokenAddress: undefined  // native coin; set to an ERC-20 address to read a token
-                    });
-                    
-                    // TODO: Double check this with real values
-                    const { result: nativeEur } = await convertCryptoToFiat({
-                        client,
-                        chain,
-                        fromTokenAddress: NATIVE_TOKEN_ADDRESS,
-                        fromAmount: Number(native.value),
-                        to: "EUR",
-                    });
-
-                    console.log("Native balance:", nativeEur);
-
-                    return {
-                        chainId: chain.id,
-                        chainName: (chain as any).name ?? `${chain.id}`,
-                        native: {
-                            symbol: native.symbol,
-                            value: native.value, // bigint in wei
-                            eurValue: nativeEur, // EUR value of the native token balance
-                            displayValue: native.displayValue, // human-readable
-                            decimals: native.decimals,
-                        },
-                    };
-                })
-            );
-
-            console.log("Get in app wallet balance");
-            console.log(balances);
-
-            return true;
-        } catch (error) {
-            console.error("Error :", error);
-            return false;
+        // Basic validation of the response
+        if (!response || !Array.isArray(response.accounts)) {
+            console.error("Failed to load server wallets:", response);
+            return [];
         }
+
+        // checking the length of the response
+        if (response.accounts.length === 0) {
+            console.warn("No server wallets found.");
+            return [];
+        }
+
+        return response.accounts;
     }
 
     /**
-     * This will clean one in-app wallets.
-     * @returns
+     * Gets a server wallet by address.
+     * @param walletAddress loads this address.
+     * @returns The server wallet instance.
      */
-    async cleanInAppWallet() {
-        try {
-            console.log("clean all in-app wallets");
-
-            // // loading the client
-            // const client = this.getClient();
-
-            // // loading the in-app wallet
-            // const userInAppWallet = await this.getInAppWallet(this.jwtToken);
-
-            // const address = userInAppWallet?.address;
-
-            // // loading the user data
-            // const user = await getUser({
-            //     client,
-            //     walletAddress: address,
-            // });
-
-            // // we are loading only one chain, but we can add any other one and will return all the balances
-            // let chains = [this.chain];
-
-            // // getting the balances for each chain
-            // const balances = await Promise.all(
-            //     chains.map(async (chain) => {
-            //         console.log(chain);
-
-            //         const native = await getWalletBalance({
-            //             client,
-            //             address,
-            //             chain,
-            //             // tokenAddress: undefined  // native coin; set to an ERC-20 address to read a token
-            //         });
-                    
-            //         // TODO: Double check this with real values
-            //         const { result: nativeEur } = await convertCryptoToFiat({
-            //             client,
-            //             chain,
-            //             fromTokenAddress: NATIVE_TOKEN_ADDRESS,
-            //             fromAmount: Number(native.value),
-            //             to: "EUR",
-            //         });
-
-            //         console.log("Native balance:", nativeEur);
-
-            //         return {
-            //             chainId: chain.id,
-            //             chainName: (chain as any).name ?? `${chain.id}`,
-            //             native: {
-            //                 symbol: native.symbol,
-            //                 value: native.value, // bigint in wei
-            //                 eurValue: nativeEur, // EUR value of the native token balance
-            //                 displayValue: native.displayValue, // human-readable
-            //                 decimals: native.decimals,
-            //             },
-            //         };
-            //     })
-            // );
-
-            // console.log(balances);
-
-            // Get all in-app wallets first
-            const walletsResponse = await this.getInAppWallets();
-
-        
-            // If there are wallets, delete each one using the profile unlinking approach
-            if (walletsResponse && walletsResponse?.length > 0) {
-                for (const wallet of walletsResponse) {
-                    try {
-                        await this.deleteWalletUser(wallet.address);
-                    } catch (walletError) {
-                        console.error(
-                            `❌ Error deleting wallet ${wallet.address}:`,
-                            walletError
-                        );
-                    }
-                }
-                console.log("delete");
-
-            } else {
-                console.log("No wallets found to delete");
-            }
-
-            // Clear local cache after deletion attempts
-            this.wallets = null;
-            return true;
-        } catch (error) {
-            console.error("Error cleaning wallets from Engine:", error);
-            // Still clear cache even if deletion failed
-            this.wallets = null;
-            return false;
-        }
-    }
-    // FIXME
-    async deleteWalletUser(address: string) {
-        try {
-            console.log(`🔍 Getting profiles: ${address}`);
-
-            // 1) Get all profiles for this wallet address
-            const walletProfiles = await getProfiles({
-                client: this.getClient(),
-            });
-
-            console.log("walletProfiles");
-            console.log(walletProfiles);
-            console.log(walletProfiles.length)
-            // console.log(`Found: ${walletProfiles.length}`);
-
-            if (walletProfiles.length === 0) {
-                console.log(`No profiles found... [${address}]`);
-                return false;
-            }
-
-            // 2) Unlink all profiles; pass allowAccountDeletion on the last one
-            for (let i = 0; i < walletProfiles.length; i++) {
-                let walletProfile = walletProfiles[i];
-
-                console.log(`Unlinking profile`);
-                console.log(walletProfile);
-
-                await unlinkProfile({
-                    client: this.getClient(),
-                    profileToUnlink: walletProfile,
-                    allowAccountDeletion: true,
-                });
-            }
-
-            console.log(`✅ Successfully deleted wallet ${address}`);
-            return true;
-        } catch (error) {
-            console.error(`❌ Error deleting wallet: ${address}:`, error);
-            throw error;
-        }
-    }
-
-    async addInAppWallet() {
-        try {
-            // FIXME later
-            this.jwtToken = this.jwtToken ? this.jwtToken : "1234";
-
-            // generate the inAppWallet
-            const inAppWalletObject = inAppWallet({
-                auth: {
-                    options: ["backend"],
-                },
-                metadata: {
-                    name: "rafael.mendes@example.com",
-                },
-                executionMode: {
-                    mode: "EIP4337",
-                    smartAccount: {
-                        chain: this.chain,
-                        sponsorGas: true,
-                    },
-                },
-            });
-
-            // Try to connect with JWT backend authentication
-            const account = await inAppWalletObject.connect({
+    async getServerWallet(walletAddress: string = "") {
+        try 
+        {
+            // attempt to load the server walletAddress
+            const serverWallet = await Engine.serverWallet({
                 client: this.client,
-                strategy: "backend",
-                walletSecret: this.jwtToken,
+                address: walletAddress,
             });
 
-            // const account = await inAppWalletObject.connect({
-            //     client: this.client,
-            //     strategy: "jwt",
-            //     jwt: this.jwtToken,
-            // });
+            // Basic validation of serverWallet and the address
+            if (!serverWallet || !serverWallet.address) {
+                console.error("Failed to load server wallet:", serverWallet);
+                return null;
+            }
 
-            console.log(" New IN APP WALLET:", account);
-        } catch (authError) {
-            console.error("❌ Backend authentication failed:", authError);
+            return serverWallet;
+
+        } catch (error) {
+            console.error("Error while loading server wallet:", error);
+            return null;
         }
     }
 
     /**
+     * Gets all the in-app wallets.
+     * @param pageSize The number of wallets to return per page.
+     * @param maxPages The maximum number of pages to fetch.
+     * @returns A promise that resolves to an array of in-app wallets.
+     */
+    async getInAppWallets(pageSize?: number, maxPages?: number) : Promise<ThirdwebUser[]> 
+    { 
+        let page = 1;
+        let pagesFetched = 0;
+        let hasMore = true;
+
+        const all: ThirdwebUser[] = [];
+        const base = "https://api.thirdweb.com/v1/wallets/user";
+        const limit = Math.min(Math.max(pageSize ?? 100, 1), 100);
+
+        while (hasMore && (!maxPages || pagesFetched < maxPages)) 
+        {
+            // Build query string
+            const qs = new URLSearchParams({
+                limit: String(limit),
+                page: String(page),
+            });
+
+            // Fetch page
+            const res = await fetch(`${base}?${qs.toString()}`, {
+                method: "GET",
+                headers: { "x-secret-key": this.clientSecret },
+            });
+
+            // Basic error handling
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`thirdweb /wallets/user ${res.status}: ${text}`);
+            }
+
+            // Parse response
+            const json = (await res.json()) as {
+                result?: {
+                    wallets?: ThirdwebUser[];
+                    pagination?: { hasMore?: boolean };
+                };
+            };
+
+            // getting all wallets
+            const wallets = json.result?.wallets ?? [];
+            all.push(...wallets);
+
+            // updating the loop variables
+            pagesFetched++;
+            page++;
+            hasMore = Boolean(json.result?.pagination?.hasMore);
+        }
+
+        return all;
+    }
+
+    /**
+     * Adds a new in-app wallet.
+     * @returns A promise that resolves when the in-app wallet is added.
+     */
+    async addInAppWallet(): Promise<Account | null> 
+    {
+        try 
+        {
+            const jwtToken = this.jwtToken;
+
+            // Validate JWT token
+            if (!jwtToken || typeof jwtToken !== "string" || jwtToken.trim().length < 10) {
+                console.error("❌ Invalid or missing JWT token");
+                return null;
+            }
+
+            // Creating an instance of the in-app wallet
+            const account = await this.getInAppWallet(jwtToken);
+
+            // Basic validation of the account and the address
+            if (!account || !account.address) {
+                console.error("❌ Failed to create or load in-app wallet:", account);
+                return null;
+            }
+
+            return account;
+
+        } catch (error) {
+            console.error("❌ addInAppWallet error:", error);
+            return null;
+        }
+    }
+
+        /**
      * Transfer AVAX from one address to another
      * @param toAddress - The address to receive AVAX
      * @param amount - Amount of AVAX to send (in AVAX, not wei)
      * @param useServerWallet - Whether to use server wallet instead of in-app wallet
-     * @param fromAddress - The address to send AVAX from (must have private key access)
+     * @param fromAddress - The specific server wallet address to send from (only used when useServerWallet is true)
      * @returns Transaction receipt
      */
-    async transferAVAX(toAddress: string, amount: string, useServerWallet: boolean = true, fromAddress: string = '' ) 
+    async transferAVAX(toAddress: string, amount: string, useServerWallet: boolean = true, fromAddress: string = "") 
     {
-        try {
+        try 
+        {
+            let transferingFrom : Account | null = null;
 
-            // loading information to transfering
-            let transferingTo = toAddress;
+            // loading wallet address should load, can be the server wallet or the in-app wallet
+            if(useServerWallet){
+                // loading the server wallet address
+                transferingFrom = await this.getServerWallet(this.serverWalletAddress);
+            } else {
+                // if isnt server wallet, we will load the in-app wallet
+                transferingFrom = await this.getInAppWallet(this.jwtToken);
+            }
 
-            // We can load a specific serverWallet or another one if passed the address
-            let transferingFrom : Account = (useServerWallet) ? await this.getServerWallet(this.serverWalletAddress) : await this.getServerWallet(fromAddress);         
-       
-            // Account
-            console.log(transferingFrom)
-            console.log(this.chain)
-            
+            // Check if we successfully got an account
+            if (!transferingFrom) {
+                throw new Error("Failed to load wallet(from) account for transaction");
+            }
+
             // Prepare the transaction, we convert to Wei as Blockchain dont't handle deciamls number
             // natively, wei is the smallest unit of the currency (Eg. AVAX = Dollars ($1.50) | Wei = Cents 150 cents)
             const transaction = prepareTransaction({
-                to: transferingTo,
+                to: toAddress,
                 value: toWei(amount),
                 chain: this.chain,
                 client: this.client,
             });
-
-            console.log(`Starting AVAX transfer from ${transferingFrom?.address} to ${transferingTo}...`);
-            console.log(`Amount: ${amount} AVAX`);
 
             // Send and confirm the transaction
             const receipt = await sendAndConfirmTransaction({
@@ -487,16 +375,14 @@ export class ThirdwebClient {
                 account: transferingFrom,
             });
 
-            console.log("✅ Transfer successful!");
-            console.log("Transaction hash:", receipt.transactionHash);
-            console.log("Block number:", receipt.blockNumber);
+            console.log('Used gas? ', receipt.gasUsed?.toString());
 
             return {
                 success: true,
                 transactionHash: receipt.transactionHash,
                 blockNumber: receipt.blockNumber,
                 gasUsed: receipt.gasUsed?.toString(),
-                from: fromAddress,
+                from: transferingFrom.address,
                 to: toAddress,
                 amount: amount,
             };
@@ -505,11 +391,143 @@ export class ThirdwebClient {
             console.error("❌ Error transferring AVAX:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Unknown error occurred",
-                from: fromAddress,
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown error occurred",
+                from: useServerWallet ? (fromAddress || this.serverWalletAddress) : "in-app-wallet",
                 to: toAddress,
                 amount: amount,
             };
         }
     }
+
+    /**
+     * TODO: You need to test if this works as expected
+     * 
+     * Convert cryptocurrency to fiat currency
+     * @param client - The Thirdweb client
+     * @param chain - The blockchain chain
+     * @param valueToConvert - The amount of cryptocurrency to convert
+     * @param coin - The fiat currency to convert to (default: EUR)
+     * @returns The converted value in fiat currency
+     */
+    async convertCryptoToCoin(
+        client: ThirdwebClient, chain: Chain, 
+        valueToConvert: string, coin: string = "EUR"
+    ){
+        // This is the returned value variable
+        let convertedValue : number = 0;
+
+        // Converting the crypto to fiat value
+        let coinValue = await convertCryptoToFiat({
+            client: client,
+            chain: chain,
+            fromTokenAddress: NATIVE_TOKEN_ADDRESS,
+            fromAmount: Number(valueToConvert),
+            to: coin,
+        });
+
+        // checking if we have a result 
+        if(coinValue && coinValue.result){
+            convertedValue = coinValue.result;
+        }
+
+        return convertedValue;
+
+    }
+    
+    /**
+     * Get the in-app wallet balance for a specific coin.
+     * @param coin The fiat currency to convert to (default: EUR)
+     * @returns The in-app wallet balance in the specified fiat currency
+     */
+    async getInAppBalance(coin: string = "EUR") 
+    {
+        try 
+        {
+            // we are loading only one chain, but we can add any other one and will return all the balances
+            let chains = [this.chain];
+
+            // loading the client, user in-app wallet and totalForCoin
+            let totalForCoin = 0;
+            const client = this.getClient();
+            const address = await this.getInAppWalletAddress(this.jwtToken);
+            
+            // loading the user data
+            const user = await getUser({ client, walletAddress: address, });
+            
+            // checking if we have an address to check it out
+            if(address)
+            {
+                // getting the balances for each chain
+                const balances = await Promise.all(
+                    chains.map(async (chain) => {
+                        
+                        // loading the wallet ballance in that chain
+                        const walletBalance = await getWalletBalance({ client: client, address: address, chain: chain });
+                        const walletStringValue = walletBalance.value.toString();
+
+                        // getting the converted value into a real coin value
+                        const convertedValue = await this.convertCryptoToCoin(client, chain, walletStringValue, coin);
+                        
+                        // building the total for that coin
+                        totalForCoin += convertedValue;
+
+                        return {
+                            chainId: chain.id,
+                            chainName: (chain as any).name ?? `${chain.id}`,
+                            native: {
+                                symbol: walletBalance.symbol,
+                                value: walletBalance.value,
+                                convertedValue: convertedValue,
+                                displayValue: walletBalance.displayValue,
+                                decimals: walletBalance.decimals,
+                            },
+                        };
+                    })
+                );
+                
+            }
+
+            return totalForCoin;
+
+        } catch (error) {
+            console.error("Error :", error);
+            return false;
+        }
+    }
+
+    /**
+     * Removes all in-app wallets.
+     */
+    async removeAllInAppWallets(): Promise<void> 
+    {
+        // loading all profiles of this client
+        const walletProfiles = await getProfiles({
+            client: this.getClient(),
+        });
+
+        console.log('walletProfiles 3');
+        console.log(walletProfiles);
+
+        // this will delete all profiles (if exist) using the unlink profile approach
+        if (walletProfiles.length >  0) {
+
+            for (let i = 0; i < walletProfiles.length; i++) {
+                let walletProfile = walletProfiles[i];
+                await unlinkProfile({
+                    client: this.getClient(),
+                    profileToUnlink: walletProfile,
+                    allowAccountDeletion: true,
+                });
+            }
+            
+        }
+
+        // Clear local cache after deletion attempts
+        this.wallets = null;
+
+    }
+
 }
